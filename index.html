@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NutriWeek</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <header>
+    <h1 class="logo">Nutri<span>Week</span></h1>
+    <div class="subtitle">Planificador semanal saludable</div>
+  </header>
+
+  <main>
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label>Rapidez comidas (L–V)</label>
+          <select id="lunchSpeed">
+            <option value="muy_rapido">Muy rápido</option>
+            <option value="rapido" selected>Rápido</option>
+            <option value="normal">Normal</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Complejidad cenas (L–V)</label>
+          <select id="dinnerComplexity">
+            <option value="rapida">Rápida</option>
+            <option value="normal" selected>Normal</option>
+            <option value="elaborada">Algo elaborada</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Repeticiones</label>
+          <select id="repeats">
+            <option value="bajas" selected>Bajas</option>
+            <option value="medias">Medias</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="primary" id="genBtn">Generar semana</button>
+        <button id="printBtn">Imprimir</button>
+        <button id="clearBtn">Vaciar</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:110px">Día</th>
+              <th>Comida</th>
+              <th>Cena</th>
+            </tr>
+          </thead>
+          <tbody id="menuBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Lista de la compra</div>
+        <div class="muted">Se actualiza al generar el menú.</div>
+        <div id="grocery" class="grocery"></div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      NutriWeek · Creado por Ramón Morillo · Febrero-2026
+    </footer>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
