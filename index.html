@@ -8,51 +8,68 @@
 </head>
 
 <body>
-  <header>
-    <h1 class="logo">Nutri<span>Week</span></h1>
-    <div class="subtitle">Planificador semanal saludable</div>
+  <header class="topbar">
+    <div class="brand">
+      <h1 class="logo">Nutri<span>Week</span></h1>
+      <div class="subtitle">Planificador semanal saludable · Mediterránea · Familia (4)</div>
+    </div>
   </header>
 
-  <main>
-    <div class="controls">
-      <div class="row">
+  <main class="container">
+
+    <section class="controls card">
+      <div class="grid">
         <div class="field">
           <label>Rapidez comidas (L–V)</label>
           <select id="lunchSpeed">
-            <option value="muy_rapido">Muy rápido</option>
-            <option value="rapido" selected>Rápido</option>
-            <option value="normal">Normal</option>
+            <option value="muy_rapido">Muy rápido (≤ 20 min)</option>
+            <option value="rapido" selected>Rápido (≤ 25 min)</option>
+            <option value="normal">Normal (≤ 35 min)</option>
           </select>
         </div>
 
         <div class="field">
           <label>Complejidad cenas (L–V)</label>
           <select id="dinnerComplexity">
-            <option value="rapida">Rápida</option>
-            <option value="normal" selected>Normal</option>
-            <option value="elaborada">Algo elaborada</option>
+            <option value="rapida">Rápida (≤ 25 min)</option>
+            <option value="normal" selected>Normal (≤ 40 min)</option>
+            <option value="elaborada">Algo elaborada (≤ 55 min)</option>
           </select>
         </div>
 
         <div class="field">
           <label>Repeticiones</label>
           <select id="repeats">
-            <option value="bajas" selected>Bajas</option>
-            <option value="medias">Medias</option>
+            <option value="cero" selected>0 repeticiones</option>
+            <option value="bajas">Bajas (permitir 1 repetición)</option>
           </select>
+        </div>
+
+        <div class="field">
+          <label>Coste</label>
+          <div class="costbox">
+            <div class="muted">Estimación semanal:</div>
+            <div class="cost" id="costTotal">—</div>
+          </div>
         </div>
       </div>
 
       <div class="buttons">
-        <button class="primary" id="genBtn">Generar semana</button>
-        <button id="printBtn">Imprimir</button>
-        <button id="clearBtn">Vaciar</button>
+        <button class="btn primary" id="genBtn">Generar semana</button>
+        <button class="btn" id="printBtn">PDF lista compra</button>
+        <button class="btn" id="printMenuBtn">PDF menú</button>
+        <button class="btn ghost" id="clearBtn">Vaciar</button>
       </div>
-    </div>
 
-    <div class="layout">
-      <div class="card">
-        <table>
+      <div class="hint">
+        Tip: en cada celda puedes <strong>Regenerar</strong> sin tocar el resto.
+      </div>
+    </section>
+
+    <section class="layout">
+      <section class="card">
+        <div class="cardTitle">Menú semanal</div>
+        <table class="table" aria-label="Menú semanal">
           <thead>
             <tr>
               <th style="width:110px">Día</th>
@@ -62,18 +79,22 @@
           </thead>
           <tbody id="menuBody"></tbody>
         </table>
-      </div>
+      </section>
 
-      <div class="card">
-        <div class="card-title">Lista de la compra</div>
-        <div class="muted">Se actualiza al generar el menú.</div>
+      <section class="card">
+        <div class="cardTitle">Lista de la compra</div>
+        <div class="muted">Ingredientes agregados por categorías (ajusta cantidades al gusto).</div>
         <div id="grocery" class="grocery"></div>
-      </div>
-    </div>
+      </section>
+    </section>
 
     <footer class="footer">
       NutriWeek · Creado por Ramón Morillo · Febrero-2026
     </footer>
+
+    <!-- Solo impresión/PDF (A4) -->
+    <section id="printArea" class="print-area" aria-hidden="true"></section>
+
   </main>
 
   <script src="./app.js"></script>
