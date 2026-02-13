@@ -55,13 +55,13 @@
       </div>
 
       <div class="buttons">
-        <button class="btn primary" id="genBtn">Generar semana</button>
-        <button class="btn" id="printBtn">PDF lista compra</button>
-        <button class="btn" id="printMenuBtn">PDF menú</button>
-        <button class="btn ghost" id="clearBtn">Vaciar</button>
+        <button class="btn primary" id="genBtn" type="button">Generar semana</button>
+        <button class="btn" id="printBtn" type="button">PDF lista compra</button>
+        <button class="btn" id="printMenuBtn" type="button">PDF menú</button>
+        <button class="btn ghost" id="clearBtn" type="button">Vaciar</button>
       </div>
 
-      <div class="hint">
+      <div class="hint" id="statusHint">
         Tip: en cada celda puedes <strong>Regenerar</strong> sin tocar el resto.
       </div>
     </section>
@@ -96,6 +96,9 @@
     <section id="printArea" class="print-area" aria-hidden="true"></section>
 
   </main>
-<script src="./app.js"></script>
+
+  <!-- defer = asegura que el DOM exista antes de ejecutar JS -->
+  <script defer src="./app.js"></script>
 </body>
 </html>
+
