@@ -1,16 +1,12 @@
-window.addEventListener("error", (e) => {
-  alert("Error en NutriWeek: " + (e?.message || "desconocido"));
-});
-
-window.addEventListener("unhandledrejection", (e) => {
-  alert("Error (promesa) en NutriWeek: " + (e?.reason?.message || e?.reason || "desconocido"));
-});
 /***********************
  * NutriWeek (offline)
+ * Creado por Ramón Morillo · Febrero-2026
+ *
  * - Anti-repetición + variedad por proteína
  * - Lista compra con ingredientes agregados
  * - Coste semanal estimado 100% offline (editable)
  * - PDF serio (imprimir/guardar como PDF)
+ * - Robustez: si no hay candidatos (por tiempo/dayType/repeticiones), relaja reglas y NO se rompe
  ***********************/
 
 const DAYS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
@@ -34,13 +30,13 @@ const CAT_ORDER = [
 
 // Costes (estimación) 100% offline.
 // Edita lo que quieras: precios orientativos €/unidad o €/kg.
-// unit: "kg" | "u" (unidad) | "lata" | "pack"
+// unit: "kg" | "u" (unidad) | "lata" | "pack" | "l"
 const PRICE = {
   // Proteínas
   "Pollo (kg)": { unit:"kg", eur: 6.90 },
   "Pavo lonchas (pack)": { unit:"pack", eur: 2.20 },
   "Carne picada pavo (kg)": { unit:"kg", eur: 8.50 },
-  "Huevos (docena)": { unit:"u", eur: 2.40 }, // aquí lo tratamos como "u"=docena
+  "Huevos (docena)": { unit:"u", eur: 2.40 }, // aquí "u" = docena
   "Merluza (kg)": { unit:"kg", eur: 11.90 },
   "Salmón (kg)": { unit:"kg", eur: 14.90 },
   "Atún lata": { unit:"lata", eur: 1.10 },
@@ -77,6 +73,14 @@ const PRICE = {
   "Especias / sal / pimienta": { unit:"pack", eur: 0.50 }, // simbólico
 };
 
+// ===== Robustez / debug visible =====
+window.addEventListener("error", (e) => {
+  alert("Error en NutriWeek: " + (e?.message || "desconocido"));
+});
+window.addEventListener("unhandledrejection", (e) => {
+  alert("Error (promesa) en NutriWeek: " + (e?.reason?.message || e?.reason || "desconocido"));
+});
+
 // Helpers
 function euro(n){
   return new Intl.NumberFormat("es-ES", { style:"currency", currency:"EUR" }).format(n);
@@ -92,14 +96,12 @@ function dish({ id, title, slot, dayType, minutes, protein, tags, ingredients })
  *  {
  *    cat: "Verduras y hortalizas",
  *    name: "Tomate (kg)", // clave para PRICE si quieres coste
- *    qty: 0.8, unit: "kg"  // cantidad orientativa semanal según el plato para 4
+ *    qty: 0.8, unit: "kg"
  *  }
- *
- * Nota: cantidades son aproximadas y orientativas.
+ * Cantidades orientativas para 4 (ajusta a vuestro consumo real).
  */
 
-// BANCO AMPLIADO (mediterráneo, saludable, razonable)
-// Comidas: rápidas; Cenas: algo más; Finde: más tiempo
+// ===== BANCO DE PLATOS (ampliable) =====
 const DISHES = [
   // ===== COMIDAS (any) =====
   dish({
@@ -197,20 +199,18 @@ const DISHES = [
     ]
   }),
   dish({
-    id:"L8", title:"Gazpacho + tortilla francesa / pavo + fruta",
+    id:"L8", title:"Gazpacho + pavo + fruta (ultrarrápido)",
     slot:"lunch", dayType:"any", minutes:10, protein:"mixto",
     tags:["ultrarrápido","verano"],
     ingredients:[
-      {cat:"Refrigerados", name:"Yogur natural (pack)", qty:0, unit:"pack"}, // no usado, pero dejamos placeholder 0
       {cat:"Refrigerados", name:"Pavo lonchas (pack)", qty:1, unit:"pack"},
-      {cat:"Huevos", name:"Huevos (docena)", qty:0.5, unit:"u"},
       {cat:"Fruta", name:"Fruta de temporada (kg)", qty:1.0, unit:"kg"},
       {cat:"Verduras y hortalizas", name:"Tomate (kg)", qty:0.8, unit:"kg"},
       {cat:"Verduras y hortalizas", name:"Pepino (u)", qty:1, unit:"u"},
       {cat:"Verduras y hortalizas", name:"Cebolla (kg)", qty:0.2, unit:"kg"},
       {cat:"Despensa / básicos", name:"AOVE (l)", qty:0.03, unit:"l"},
       {cat:"Despensa / básicos", name:"Especias / sal / pimienta", qty:1, unit:"pack"},
-    ].filter(x => x.qty > 0)
+    ]
   }),
 
   // ===== CENAS (weekday) =====
@@ -299,7 +299,7 @@ const DISHES = [
 
   // ===== FINES DE SEMANA (weekend) =====
   dish({
-    id:"W1", title:"Arroz integral “a la mediterránea” (verduras + atún)",
+    id:"W1", title:"Arroz integral a la mediterránea (verduras + atún)",
     slot:"lunch", dayType:"weekend", minutes:45, protein:"mixto",
     tags:["finde","para 4"],
     ingredients:[
@@ -351,6 +351,35 @@ const DISHES = [
       {cat:"Verduras y hortalizas", name:"Lechuga/mezcla ensalada (bolsa)", qty:1, unit:"pack"},
       {cat:"Verduras y hortalizas", name:"Tomate (kg)", qty:0.4, unit:"kg"},
       {cat:"Despensa / básicos", name:"AOVE (l)", qty:0.05, unit:"l"},
+      {cat:"Despensa / básicos", name:"Especias / sal / pimienta", qty:1, unit:"pack"},
+    ]
+  }),
+
+  // ===== FINES DE SEMANA: CENAS <= 40 min (para evitar crash con "Normal ≤40") =====
+  dish({
+    id:"W5", title:"Ensalada completa (atún + aguacate + huevo) · cena ligera",
+    slot:"dinner", dayType:"weekend", minutes:20, protein:"mixto",
+    tags:["rápido","ligero"],
+    ingredients:[
+      {cat:"Conservas", name:"Atún lata", qty:2, unit:"lata"},
+      {cat:"Huevos", name:"Huevos (docena)", qty:0.5, unit:"u"},
+      {cat:"Verduras y hortalizas", name:"Lechuga/mezcla ensalada (bolsa)", qty:1, unit:"pack"},
+      {cat:"Verduras y hortalizas", name:"Tomate (kg)", qty:0.4, unit:"kg"},
+      {cat:"Verduras y hortalizas", name:"Aguacate (u)", qty:2, unit:"u"},
+      {cat:"Despensa / básicos", name:"AOVE (l)", qty:0.02, unit:"l"},
+      {cat:"Despensa / básicos", name:"Especias / sal / pimienta", qty:1, unit:"pack"},
+    ]
+  }),
+  dish({
+    id:"W6", title:"Tortilla de verduras (calabacín + cebolla) + ensalada",
+    slot:"dinner", dayType:"weekend", minutes:35, protein:"huevos",
+    tags:["clásico","equilibrado"],
+    ingredients:[
+      {cat:"Huevos", name:"Huevos (docena)", qty:0.8, unit:"u"},
+      {cat:"Verduras y hortalizas", name:"Calabacín (kg)", qty:0.7, unit:"kg"},
+      {cat:"Verduras y hortalizas", name:"Cebolla (kg)", qty:0.25, unit:"kg"},
+      {cat:"Verduras y hortalizas", name:"Lechuga/mezcla ensalada (bolsa)", qty:1, unit:"pack"},
+      {cat:"Despensa / básicos", name:"AOVE (l)", qty:0.03, unit:"l"},
       {cat:"Despensa / básicos", name:"Especias / sal / pimienta", qty:1, unit:"pack"},
     ]
   }),
@@ -415,54 +444,76 @@ function generateWeek(){
   renderAll();
 }
 
+/**
+ * pickDish robusta:
+ * - filtra por slot/dayType/tiempo
+ * - aplica repeticiones
+ * - si se queda sin candidatos, relaja reglas gradualmente para NO romper
+ * - scoring: evita repetir proteína en días seguidos
+ */
 function pickDish({ slot, dayType, limit, repeats, usedDishIds, proteinHistory }){
-  // 1) filtra por slot, dayType y tiempo
+  // Intento 1: reglas estrictas
   let candidates = DISHES.filter(d =>
     d.slot === slot &&
     (d.dayType === "any" || d.dayType === dayType) &&
     d.minutes <= limit
   );
 
-  // 2) regla de repeticiones
-  const maxRepeat = (repeats === "bajas") ? 1 : 0; // 0 repeticiones -> maxRepeat 0 (no repetir)
+  const maxRepeat = (repeats === "bajas") ? 1 : 0; // 0 repeticiones => no repetir
   candidates = candidates.filter(d => (usedDishIds.get(d.id) || 0) <= maxRepeat);
 
-  // 3) scoring: variedad por proteína (penaliza repeticiones seguidas)
+  // Si no hay candidatos, RELAJAMOS reglas gradualmente
+  if (candidates.length === 0){
+    // Intento 2: permitir cualquier dayType manteniendo tiempo
+    candidates = DISHES.filter(d => d.slot === slot && d.minutes <= limit);
+    candidates = candidates.filter(d => (usedDishIds.get(d.id) || 0) <= maxRepeat);
+  }
+  if (candidates.length === 0){
+    // Intento 3: ampliar tiempo (+20) manteniendo dayType
+    candidates = DISHES.filter(d =>
+      d.slot === slot &&
+      (d.dayType === "any" || d.dayType === dayType) &&
+      d.minutes <= (limit + 20)
+    );
+    candidates = candidates.filter(d => (usedDishIds.get(d.id) || 0) <= maxRepeat);
+  }
+  if (candidates.length === 0){
+    // Intento 4: ampliar tiempo (+20) y permitir repetir si hace falta
+    candidates = DISHES.filter(d => d.slot === slot && d.minutes <= (limit + 20));
+  }
+  if (candidates.length === 0){
+    // Último recurso: cualquier plato del slot
+    candidates = DISHES.filter(d => d.slot === slot);
+  }
+
+  // Scoring por variedad de proteína
   const last = proteinHistory[proteinHistory.length - 1];
   const last2 = proteinHistory[proteinHistory.length - 2];
 
   const scored = candidates.map(d => {
     let score = 0;
 
-    // evita misma proteína seguida
     if (d.protein === last) score -= 3;
     if (d.protein === last2) score -= 1.5;
 
-    // favorece proteínas no vistas recientemente
     const recent = proteinHistory.slice(-4);
     if (!recent.includes(d.protein)) score += 1.2;
 
-    // micro-bonus a legumbres/veg en comidas
     if (slot === "lunch" && (d.protein === "legumbres" || d.protein === "veg")) score += 0.6;
-
-    // micro-bonus a pescado 2-3 veces/semana
     if (d.protein === "pescado") score += 0.3;
 
     return { d, score };
   }).sort((a,b) => b.score - a.score);
 
-  // 4) elige aleatoriamente entre el top (para que no sea siempre el 1º)
+  // elige aleatorio entre top 8
   const top = scored.slice(0, Math.min(8, scored.length)).map(x => x.d);
-  let chosen = top[Math.floor(Math.random() * top.length)];
+  const chosen = top[Math.floor(Math.random() * top.length)];
 
-  // 5) fallback si por repeticiones se quedó corto
+  // Seguridad total (evita crash sí o sí)
   if (!chosen){
-    const fallback = DISHES.filter(d =>
-      d.slot === slot &&
-      (d.dayType === "any" || d.dayType === dayType) &&
-      d.minutes <= limit
-    );
-    chosen = fallback[Math.floor(Math.random()*fallback.length)];
+    const fallback = DISHES.find(d => d.slot === slot) || DISHES[0];
+    usedDishIds.set(fallback.id, (usedDishIds.get(fallback.id) || 0) + 1);
+    return fallback;
   }
 
   usedDishIds.set(chosen.id, (usedDishIds.get(chosen.id) || 0) + 1);
@@ -473,256 +524,4 @@ function pickDish({ slot, dayType, limit, repeats, usedDishIds, proteinHistory }
 window.regen = function(dayIndex, slot){
   const lunchSpeed = document.getElementById("lunchSpeed").value;
   const dinnerComplexity = document.getElementById("dinnerComplexity").value;
-  const repeats = document.getElementById("repeats").value;
-
-  const day = menu[dayIndex].day;
-  const dayType = isWeekend(day) ? "weekend" : "weekday";
-  const limit = slot === "lunch"
-    ? SPEED_LIMITS.lunch[lunchSpeed]
-    : SPEED_LIMITS.dinner[dinnerComplexity];
-
-  // reconstruir usado para anti-repetición, quitando el actual
-  const usedDishIds = new Map();
-  menu.forEach((r, idx) => {
-    ["lunch","dinner"].forEach(s => {
-      const d = r[s];
-      if (!d) return;
-      if (idx === dayIndex && s === slot) return; // excluye el actual a reemplazar
-      usedDishIds.set(d.id, (usedDishIds.get(d.id) || 0) + 1);
-    });
-  });
-
-  // historial de proteína hasta el día anterior
-  const proteinHistory = menu
-    .slice(0, dayIndex)
-    .map(r => (slot === "lunch" ? r.lunch?.protein : r.dinner?.protein))
-    .filter(Boolean);
-
-  menu[dayIndex][slot] = pickDish({
-    slot,
-    dayType,
-    limit,
-    repeats,
-    usedDishIds,
-    proteinHistory
-  });
-
-  renderAll();
-};
-
-window.showIngr = function(dayIndex, slot){
-  const d = menu[dayIndex][slot];
-  if (!d) return;
-  const lines = d.ingredients.map(it => `• ${it.cat}: ${it.name} (${prettyQty(it.qty, it.unit)})`);
-  alert(`${d.title}\n\nIngredientes orientativos (para 4):\n${lines.join("\n")}`);
-};
-
-// ===== Render =====
-function renderAll(){
-  renderMenu();
-  const byCat = getGroceryByCategory();
-  renderGrocery(byCat);
-  renderCost(byCat);
-}
-
-function renderMenu(){
-  menuBody.innerHTML = "";
-  menu.forEach((row, idx) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><strong>${row.day}</strong></td>
-      ${renderCell(idx, "lunch", row.lunch)}
-      ${renderCell(idx, "dinner", row.dinner)}
-    `;
-    menuBody.appendChild(tr);
-  });
-}
-
-function renderCell(idx, slot, d){
-  const label = slot === "lunch" ? "Comida" : "Cena";
-  if (!d){
-    return `<td><span class="muted">—</span></td>`;
-  }
-  const pills = [
-    `<span class="pill">${label}</span>`,
-    `<span class="pill">${d.minutes} min</span>`,
-    `<span class="pill">${d.protein}</span>`,
-    ...d.tags.map(t => `<span class="pill">${t}</span>`)
-  ].join(" ");
-
-  return `
-    <td>
-      <div class="meal">${escapeHtml(d.title)}</div>
-      <div class="meta">${pills}</div>
-      <div class="cell-actions">
-        <button class="btn small" onclick="regen(${idx}, '${slot}')">Regenerar</button>
-        <button class="btn small" onclick="showIngr(${idx}, '${slot}')">Ingredientes</button>
-      </div>
-    </td>
-  `;
-}
-
-function renderGrocery(byCat){
-  const cats = sortCats(Object.keys(byCat));
-  groceryEl.innerHTML = cats.map(cat => {
-    const items = byCat[cat]
-      .sort((a,b) => a.name.localeCompare(b.name, "es"))
-      .map(it => `<div class="gitem">${escapeHtml(it.name)} <span class="muted">· ${prettyQty(it.qty, it.unit)}</span></div>`)
-      .join("");
-    return `<div class="gcat">${escapeHtml(cat)}</div>${items}`;
-  }).join("");
-}
-
-function renderCost(byCat){
-  const total = estimateCost(byCat);
-  costTotalEl.textContent = total ? euro(total) : "—";
-}
-
-// ===== Lista compra (agregación) =====
-function getGroceryByCategory(){
-  const byCat = {};
-  const add = (it) => {
-    if (!byCat[it.cat]) byCat[it.cat] = [];
-    const existing = byCat[it.cat].find(x => x.name === it.name && x.unit === it.unit);
-    if (existing) existing.qty += it.qty;
-    else byCat[it.cat].push({ ...it });
-  };
-
-  // Añadir ingredientes de todo el menú
-  menu.forEach(r => {
-    ["lunch","dinner"].forEach(slot => {
-      const d = r[slot];
-      if (!d) return;
-      d.ingredients.forEach(add);
-    });
-  });
-
-  // “Básicos” que casi siempre se usan (puedes quitarlos si no quieres)
-  add({cat:"Despensa / básicos", name:"AOVE (l)", qty:0.10, unit:"l"});
-  add({cat:"Despensa / básicos", name:"Especias / sal / pimienta", qty:1, unit:"pack"});
-
-  // Fruta/ensalada genérica por semana (si el menú no la cubre suficiente)
-  add({cat:"Fruta", name:"Fruta de temporada (kg)", qty:1.5, unit:"kg"});
-
-  return byCat;
-}
-
-// ===== Coste estimado offline =====
-function estimateCost(byCat){
-  let total = 0;
-
-  for (const cat of Object.keys(byCat)){
-    for (const it of byCat[cat]){
-      const price = PRICE[it.name];
-      if (!price) continue; // si no está, no se calcula (evita inventar)
-      // compatibilidad simple por unidad
-      total += it.qty * price.eur;
-    }
-  }
-  // redondeo 2 decimales
-  return Math.round(total * 100) / 100;
-}
-
-// ===== PDF / impresión =====
-function buildPrintGrocery(){
-  const printArea = document.getElementById("printArea");
-  const stamp = new Date().toLocaleString("es-ES");
-
-  const byCat = getGroceryByCategory();
-  const cats = sortCats(Object.keys(byCat));
-
-  let html = `
-    <h1 class="p-title">NutriWeek — Lista de la compra</h1>
-    <p class="p-sub">Generado: ${stamp} · Familia (4) · Mediterránea saludable · Coste estimado: ${costTotalEl.textContent}</p>
-  `;
-
-  cats.forEach(cat => {
-    html += `<div class="p-section">${escapeHtml(cat)}</div><ul class="p-list">`;
-    byCat[cat]
-      .sort((a,b) => a.name.localeCompare(b.name, "es"))
-      .forEach(it => {
-        html += `<li class="p-item"><span class="box"></span>${escapeHtml(it.name)} <span style="color:#555">(${prettyQty(it.qty, it.unit)})</span></li>`;
-      });
-    html += `</ul>`;
-  });
-
-  html += `<div class="p-footer">NutriWeek · Creado por Ramón Morillo · Febrero-2026</div>`;
-  printArea.innerHTML = html;
-}
-
-function buildPrintMenu(){
-  const printArea = document.getElementById("printArea");
-  const stamp = new Date().toLocaleString("es-ES");
-
-  let html = `
-    <h1 class="p-title">NutriWeek — Menú semanal</h1>
-    <p class="p-sub">Generado: ${stamp} · Familia (4) · Mediterránea saludable</p>
-    <table class="p-table" aria-label="Menú semanal para imprimir">
-      <thead>
-        <tr>
-          <th style="width:90px">Día</th>
-          <th>Comida</th>
-          <th>Cena</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-
-  menu.forEach(r => {
-    html += `
-      <tr>
-        <td><strong>${escapeHtml(r.day)}</strong></td>
-        <td>${escapeHtml(r.lunch?.title || "—")}<div style="color:#555; font-size:11px; margin-top:4px;">${r.lunch ? `${r.lunch.minutes} min · ${r.lunch.protein}` : ""}</div></td>
-        <td>${escapeHtml(r.dinner?.title || "—")}<div style="color:#555; font-size:11px; margin-top:4px;">${r.dinner ? `${r.dinner.minutes} min · ${r.dinner.protein}` : ""}</div></td>
-      </tr>
-    `;
-  });
-
-  html += `
-      </tbody>
-    </table>
-    <div class="p-footer">NutriWeek · Creado por Ramón Morillo · Febrero-2026</div>
-  `;
-
-  printArea.innerHTML = html;
-}
-
-// ===== Utils =====
-function prettyQty(qty, unit){
-  if (qty === 0) return "";
-  const r = Math.round(qty * 100) / 100;
-  if (unit === "kg") return `${r} kg`;
-  if (unit === "l") return `${r} l`;
-  if (unit === "u") return `${r} u`;
-  if (unit === "lata") return `${r} lata(s)`;
-  if (unit === "pack") return `${r} pack(s)`;
-  return `${r} ${unit}`;
-}
-
-function sortCats(cats){
-  return cats.sort((a,b) => {
-    const ia = CAT_ORDER.indexOf(a);
-    const ib = CAT_ORDER.indexOf(b);
-    if (ia === -1 && ib === -1) return a.localeCompare(b, "es");
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-}
-
-function escapeHtml(s){
-  return String(s ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[m]));
-}
-
-function clearAll(){
-  menu = DAYS.map(d => ({ day: d, lunch: null, dinner: null }));
-  menuBody.innerHTML = "";
-  groceryEl.innerHTML = "";
-  costTotalEl.textContent = "—";
-  document.getElementById("printArea").innerHTML = "";
-}
-
-// Render inicial vacío
-clearAll();
+  const repeats = document.getE
