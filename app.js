@@ -1,3 +1,10 @@
+window.addEventListener("error", (e) => {
+  alert("Error en NutriWeek: " + (e?.message || "desconocido"));
+});
+
+window.addEventListener("unhandledrejection", (e) => {
+  alert("Error (promesa) en NutriWeek: " + (e?.reason?.message || e?.reason || "desconocido"));
+});
 /***********************
  * NutriWeek (offline)
  * - Anti-repetición + variedad por proteína
